@@ -13,7 +13,7 @@ A major challenge in analyzing the compositional structure of microbiome data is
 For support using SourceID-NMF, please email: zhuang82-c@my.cityu.edu.hk
 
 ## Required Dependencies
-Detailed package information can be found in SourceID-NMF.yaml. The main environment configuration we need includes:
+Detailed package information can be found in requirement.txt. The main environment configuration we need includes:
 * Conda
 * Python >=3.8.13
 * numpy >=1.24.3
@@ -21,31 +21,18 @@ Detailed package information can be found in SourceID-NMF.yaml. The main environ
 * tqdm >=4.66.1
 * scipy >=1.10.1
 
-We suggest installing SourceID-NMF's environment "*.yml" by using Anaconda after cloning the repository. This will install all the required packages in CPU mode.
+We suggest installing SourceID-NMF's dependencies in a conda environment.
 
 The command is: 
 ```
-Linux version
-conda env create -f nmf_linux.yml -n nmf
-
-Mac version
-conda env create -f nmf_mac.yml -n nmf
-```
-
-Alternatively, you can use conda to install all packages, as shown on the command line below:
-```
-# create a new environment nmf with python 3.8 using conda
-
-conda create -n nmf python=3.8.13
-
+conda env create -n nmf python numpy pandas tqdm scipy
 conda activate nmf
-
-pip install numpy pandas tqdm scipy
 ```
 
-After installing, you only need to activate the "nmf" environment before using SourceID-NMF for the next time.
+Clone the repository and install SourceID-NMF in the nmf environment.
+
 ```
-conda activate nmf
+pip install .
 ```
 
 
