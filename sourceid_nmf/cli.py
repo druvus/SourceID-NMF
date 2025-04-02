@@ -1,5 +1,5 @@
 """
-Command-line interface for SourceID-NMF.
+Command-line interface for SourceID-NMF with advanced optimization options.
 
 This module provides the command-line interface for running SourceID-NMF.
 """
@@ -88,9 +88,9 @@ def parse_args() -> argparse.Namespace:
 
     track_parser.add_argument(
         "-r", "--rho",
-        type=int,
-        default=1,
-        help="Penalty parameter"
+        type=float,
+        default=1.0,
+        help="Initial penalty parameter (0 for auto-selection)"
     )
 
     track_parser.add_argument(
@@ -110,6 +110,39 @@ def parse_args() -> argparse.Namespace:
     track_parser.add_argument(
         "-p", "--perf",
         help="Path to output performance metrics (optional)"
+    )
+
+    # Advanced optimization options
+    optimization_group = track_parser.add_argument_group('Advanced Optimization Options')
+
+    optimization_group.add_argument(
+        "--use-active-set",
+        action="store_true",
+        help="Enable active-set method to accelerate sparse data processing"
+    )
+
+    optimization_group.add_argument(
+        "--no-active-set",
+        action="store_true",
+        help="Disable active-set method (overrides auto-detection)"
+    )
+
+    optimization_group.add_argument(
+        "--adaptive-rho",
+        action="store_true",
+        help="Enable adaptive rho parameter for faster convergence"
+    )
+
+    optimization_group.add_argument(
+        "--fixed-rho",
+        action="store_true",
+        help="Use fixed rho parameter (no adaptation)"
+    )
+
+    optimization_group.add_argument(
+        "--auto-optimize",
+        action="store_true",
+        help="Automatically detect and apply optimal settings (default)"
     )
 
     # Evaluate command - for evaluation against true proportions
@@ -181,6 +214,28 @@ def main() -> None:
         # Execute the appropriate command
         if args.command == "track":
             logger.info("Starting source tracking")
+
+            # Determine optimization settings
+            use_active_set = not args.no_active_set
+            adaptive_rho = not args.fixed_rho
+
+            # Explicit settings override defaults
+            if args.use_active_set:
+                use_active_set = True
+            if args.adaptive_rho:
+                adaptive_rho = True
+
+            # Use auto-detect if requested
+            if args.auto_optimize:
+                use_active_set = True
+                adaptive_rho = True
+                if args.rho == 1.0:  # If using default rho
+                    args.rho = 0  # 0 means auto-selection
+
+            # Log optimization settings
+            logger.info(f"Using optimization settings: active-set={use_active_set}, "
+                       f"adaptive-rho={adaptive_rho}, initial-rho={args.rho}")
+
             run_source_tracking(
                 data_path=args.input,
                 name_path=args.name,
@@ -192,7 +247,9 @@ def main() -> None:
                 rho=args.rho,
                 weight_factor=args.weight,
                 threshold=args.threshold,
-                perf_output=args.perf
+                perf_output=args.perf,
+                use_active_set=use_active_set,
+                adaptive_rho=adaptive_rho
             )
             logger.info(f"Source tracking completed. Results saved to {args.output}")
 
