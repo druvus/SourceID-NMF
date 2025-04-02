@@ -2,7 +2,8 @@
 [SourceID-NMF: Towards more accurate microbial source tracking via non-negative matrix factorization.](https://doi.org/10.1093/bioinformatics/btae227)
 
 
-A major challenge in analyzing the compositional structure of microbiome data is identifying its potential origins. Here, we introduce a novel tool called SourceID-NMF for precise microbial source tracking. SourceID-NMF utilizes a non-negative matrix factorization (NMF) algorithm to trace the microbial sources contributing to a target sample.
+A major challenge in analyzing the compositional structure of microbiome data is identifying its potential origins. Here, we introduce SourceID-NMF, a tool for precise microbial source tracking. SourceID-NMF utilizes a non-negative matrix factorization (NMF) algorithm to trace the microbial sources contributing to a target sample.
+
 
 <div style="text-align: center;">
 <img src='image/NMF.png' width="372" height="186">
@@ -32,34 +33,69 @@ conda activate nmf
 Clone the repository and install SourceID-NMF in the nmf environment.
 
 ```
+git clone https://github.com/username/sourceid-nmf.git
+cd sourceid-nmf
 pip install .
 ```
 
-
 ## Usage
 
-#### Command
+SourceID-NMF provides two main commands:
+- `track`: Perform source tracking analysis
+- `evaluate`: Evaluate tracking performance against true proportions
+
+### Source Tracking Command
+
 ```
-python SourceID-NMF.py -i ./data/nmf_data.txt -n ./data/name.txt -o ./estimated_proportions.txt -t 8
+sourceid-nmf track -i ./data/nmf_data.txt -n ./data/name.txt -o ./estimated_proportions.txt
 ```
 
-#### Parameters
-
-As input, SourceID-NMF provides some parameters for different purposes. Some of the parameters exist as inputs and outputs of data, including:
+#### Basic Parameters
 
 ```
 Options
--i | --input:        A path to an input.txt file: Input of count table.
--n | --name:         A path to an name.txt file: Data labels for input data. 
--o | --output:       A path to an output.txt file: Output of estimated proportions.
+-i, --input        Path to input count table (tab-separated)
+-n, --name         Path to name file: Data labels for input data
+-o, --output       Path to output file for estimated proportions
+-t, --thread       Max workers for multiprocessing operation (default: 20)
+-e, --iter         Maximum number of iterations for the NMF model (default: 2000)
+-r, --rho          The penalty parameter (default: 1.0, 0 for auto-selection)
+-a, --weight       The weighting matrix factor (default: 1)
+-c, --threshold    The convergence threshold (default: 1e-06)
+-m, --mode         Operation mode: "normal" or "cluster" (default: normal)
+-f, --cutoff       The clustering threshold for JSD distance (default: 0.25)
+-p, --perf         Path to output performance metrics (optional)
 ```
+
+#### Advanced Optimization Parameters
+
+```
+Options
+--use-active-set   Enable active-set method to accelerate sparse data processing
+--no-active-set    Disable active-set method (overrides auto-detection)
+--adaptive-rho     Enable adaptive rho parameter for faster convergence
+--fixed-rho        Use fixed rho parameter (no adaptation)
+--auto-optimize    Automatically detect and apply optimal settings (default)
+```
+
+#### Global Parameters
+
+```
+Options
+-v, --verbose      Increase verbosity (can be used multiple times)
+--log              Path to log file (optional)
+--version          Show version number and exit
+```
+
+### Input Data Format
+
 Suppose a dataset has 19 sources, represented by D1, D2,... ,D19, and 9 sinks, represented by D20, D21,... , D28.
 
 The input to SourceID-NMF is composed of two txt files:
 
 `-i | --input`
 
-The input count table containing sources and sinks (M by N). where M is the number of samples and N is the number of taxa. Row names are the sample ids ('SampleID'). Column names are the taxa ids. Every consecutive column contains read counts for each sample.
+The input count table containing sources and sinks (M by N). where M is the number of samples and N is the number of taxa. Row names are the taxa ids. Column names are the sample ids. Every column contains read counts for each sample.
 
 The specific input table case is shown below:
 
@@ -75,7 +111,7 @@ The specific input table case is shown below:
 
 `-n | --name`
 
-The name table contains four columns, 'SampleID', 'Env' and 'SourceSink'. The 'SampleID' column describes the labels for each source data or sink data. The 'Env' column describes the environment to which each source or sink belongs, e.g. the first row Env = 'Electronics' means that the source was collected from Electronics. This 'SourceSink' column describes the source or sink to which the data belongs. 
+The name table contains three columns, 'SampleID', 'Env' and 'SourceSink'. The 'SampleID' column describes the labels for each source data or sink data. The 'Env' column describes the environment to which each source or sink belongs, e.g. the first row Env = 'Electronics' means that the source was collected from Electronics. This 'SourceSink' column describes the source or sink to which the data belongs. 
 
 The specific name table case is shown below:
 
@@ -89,11 +125,11 @@ The specific name table case is shown below:
 | D19 | Tubes | Source |
 | D20 | fecal | Sink |
 
-The output to SourceID-NMF is composed of one txt files:
+### Output Data Format
 
 `-o | --output`
 
-The count table contains all the estimated proportions (K by S). where K is the number sinks and S is the number of sources (including an unknown source). The specific value in this table represents the contribution of each source to each sink. The sum of the proportions in each row is 1.
+The output table contains all the estimated proportions (K by S+1), where K is the number of sinks and S is the number of sources (including an unknown source). The specific value in this table represents the contribution of each source to each sink. The sum of the proportions in each row is 1.
 
 The specific output table case is shown below:
 
@@ -101,74 +137,77 @@ The specific output table case is shown below:
 | ------------- | ------------- |------------- |------------- |------------- |------------- |------------- |
 | D20 | 0.021288945 |	0.013085965 |	0.008938594 | ... |	0.005083895 |	0.485646292 |
 
+### Performance Evaluation Command
 
-Meanwhile, SourceID-NMF also provides some parameters that may affect the final result, including:
+To evaluate the performance of source tracking against known true proportions:
+
+```
+sourceid-nmf evaluate -e ./estimated_proportions.txt -t ./data/true_proportions.txt -o ./performance_results.txt
+```
+
+Parameters:
+
 ```
 Options
--t | --thread:       Max workers for multiprocessing operation. (default:20)
--e | --iter:         Maximum number of iterations for the NMF model. (default:2000)
--r | --rho:          The penalty parameter. (default:1)
--a | --A:            The weighting matrix coefficients. (default:1)
--c | --threshold:    The convergence threshold. (default:1e-06)
--m | --clustering:   The option to cluster similar sources before doing source tracking analysis (default:normal/cluster)
--f | --threshold:    The clustering threshold e.g., JSD < threshold (default:0.25)
+-e, --estimated    Path to estimated proportions file
+-t, --true         Path to true proportions file
+-o, --output       Path to output performance results (default: proportion_perf.txt)
 ```
 
-`-t | --thread`
+## Advanced Features
 
-In SourceID-NMF, we can execute multiple tasks concurrently by creating a thread pool, thus improving the performance and efficiency of the program. This parameter represents the ThreadPoolExecutor parameter max_workers, which specifies the maximum number of threads in the thread pool. We set it to the default value of 20. The selection of this parameter should be less than or equal to the number of CPUs. We can gradually increase the number of parameters to improve the speed of the model iteration.
+### Automatic Optimization
 
-`-e | --iter`
+The current version of SourceID-NMF includes several advanced optimization features that can be automatically selected based on your data characteristics:
 
-This parameter represents the maximum number of iterations of the model. We set it to the default value of 2000 iterations. The user can increase the number of iterations as well to observe if the model outputs better results, but again this will consume more running time.
+1. **Active-Set Method**: Accelerates processing of sparse data matrices by focusing computation on non-zero elements.
 
-`-r | --rho`
+2. **Adaptive Rho Parameter**: Dynamically adjusts the penalty parameter during optimization for faster convergence.
 
-This parameter represents the penalty parameter of the model. We set it to a default value of 1.
+3. **Parallel Processing**: Optimizes thread allocation between sink processing and ADMM optimization based on your data and available CPU cores.
 
-`-a | --A`
+4. **Data Characteristic Detection**: Automatically analyzes your data to select optimal parameters.
 
-In SourceID-NMF, we incorporate a weight matrix $A$ to regulate the similarity between the estimated taxa abundance and the observed taxa abundance in the sources. This parameter represents the coefficients of the weighting matrix. We set it to the default value of 1. The user can adjust the value of this parameter to increase the tolerance of the difference between W and Y in the formula. 
+To use these features, simply add the `--auto-optimize` flag:
 
-`-c | --convergence threshold`
+```
+sourceid-nmf track -i ./data/nmf_data.txt -n ./data/name.txt -o ./estimated_proportions.txt --auto-optimize
+```
 
-This parameter represents the convergence threshold of the model. We set it to the default value of 1e-06. The model may terminate the iterations early due to the limitations of the convergence threshold before the maximum number of iterations is reached. The user can likewise lower the convergence threshold to see if the model outputs better results, again consuming more running time.
+### Source Clustering
 
-`-m | --clustering`
-Because the number of input reference sources is the major factor affecting the running time of SourceID-NMF, reducing the number of input sources will speed up the process. One possible approach is to cluster the sources and use representative sources as input. We incorporate this option into SourceID-NMF for the convenience of our users. If users want to do a rough discovery, they can first cluster the sources and then use representative sources as input for source tracking.
+For datasets with many similar sources, SourceID-NMF can cluster sources before analysis to improve performance:
 
-`-f | --clustering threshold`
-This parameter represents the minimum threshold for hierarchical merging sources. We set it to the default value of 0.25.
+```
+sourceid-nmf track -i ./data/nmf_data.txt -n ./data/name.txt -o ./estimated_proportions.txt -m cluster -f 0.25
+```
+
+The `-f` parameter controls the Jensen-Shannon divergence threshold for clustering (lower values create more clusters).
 
 ## Demo
-Here, we provide some datasets for SourceID-NMF testing. The /data folder has one test data set containing two txt input files, "nmf_data.txt" and "name.txt". We can run it on the test data by running the following command:
+
+To run the demo data with default settings:
 
 ```
-python SourceID-NMF.py -i ./data/nmf_data.txt -n ./data/name.txt -o ./estimated_proportions.txt -t 20 -e 2000 -r 1 -a 1 -c 1e-06
+sourceid-nmf track -i ./data/nmf_data.txt -n ./data/name.txt -o ./estimated_proportions.txt
 ```
 
-After running the code, you can find the file 'estimated_proportions.txt' in the folder corresponding to that dataset, which contains the results of the model run, i.e., the contributions of the sources to the sinks. 
-
-Finally, for simulated data, the user can also compare the estimated proportions with the true proportions to evaluate the performance of the model. We output the Jensen-Shannon divergence and the difference between the estimated and true proportions by running the evaluated pipeline and the corresponding average. The specific command is as follows.                     
-```
-python data_estimation.py -e ./estimated_proportions.txt -t ./data/true_proportions.txt
-```
-and returns a count table containing the Jensen-Shannon divergence and Difference for each sink. the specific output table situation is as follows:
-
-| | D20 |
-| ------------- | ------------- |
-| jsd | 0.013199137 |
-| diff | 0.034919905 |
-
-If the user wishes to cluster the source before running the source trace analysis, the specific command is as follows.
+With advanced optimization:
 
 ```
-python SourceID-NMF.py -m cluster -i ./data/nmf_data.txt -n ./data/name.txt -o ./estimated_proportions.txt
+sourceid-nmf track -i ./data/nmf_data.txt -n ./data/name.txt -o ./estimated_proportions.txt --auto-optimize
 ```
 
-## Simulation data
+To evaluate performance on simulated data:
+
+```
+sourceid-nmf evaluate -e ./estimated_proportions.txt -t ./data/true_proportions.txt
+```
+
+## Simulation Data
+
 Our simulated data was generated using the microbial data from the Earth's microbiome project [1]. It can be downloaded from http://ftp.microbio.me/emp/release1/otu_tables/closed_ref_greengenes/ [1]. We used the emp cr_gg_13 8.subset 2k.rare 10000.biom file from this link to simulate data.
 
-
 ## References
-[1] Thompson, L. R. et al. A communal catalogue reveals Earth’s multiscale microbial diversity. Nature 551, 457–463 (2017).
+
+[1] Thompson, L. R. et al. A communal catalogue reveals Earth's multiscale microbial diversity. Nature 551, 457–463 (2017).
