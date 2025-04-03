@@ -33,7 +33,7 @@ conda activate nmf
 Clone the repository and install SourceID-NMF in the nmf environment.
 
 ```
-git clone https://github.com/username/sourceid-nmf.git
+git clone https://github.com/druvus/sourceid-nmf.git
 cd sourceid-nmf
 pip install .
 ```
